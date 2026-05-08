@@ -6,23 +6,7 @@ import {
 	NodeOperationError,
 	IHookFunctions,
 } from 'n8n-workflow';
-import { API, Zalo } from 'zalo-api-final';
-
-// GroupEventType mirroring zlapi GroupEventType values
-// If zalo-api-final exports GroupEventType, use that instead
-const GroupEventTypeMap: Record<string, string> = {
-	JOIN: 'join',
-	LEAVE: 'leave',
-	UPDATE: 'update',
-	UNKNOWN: 'unknown',
-	NEW_LINK: 'new_link',
-	ADD_ADMIN: 'add_admin',
-	REMOVE_ADMIN: 'remove_admin',
-	JOIN_REQUEST: 'join_request',
-	BLOCK_MEMBER: 'block_member',
-	REMOVE_MEMBER: 'remove_member',
-	UPDATE_SETTING: 'update_setting',
-};
+import { API, GroupEventType, Zalo } from 'zalo-api-final';
 
 let api: API | undefined;
 
@@ -64,53 +48,113 @@ export class ZaloGroupEventTrigger implements INodeType {
 				options: [
 					{
 						name: 'Thành Viên Vào Nhóm',
-						value: GroupEventTypeMap.JOIN,
+						value: GroupEventType.JOIN,
 						description: 'Khi có thành viên mới vào nhóm',
 					},
 					{
 						name: 'Thành Viên Rời Nhóm',
-						value: GroupEventTypeMap.LEAVE,
+						value: GroupEventType.LEAVE,
 						description: 'Khi có thành viên rời nhóm',
 					},
 					{
 						name: 'Yêu Cầu Vào Nhóm',
-						value: GroupEventTypeMap.JOIN_REQUEST,
+						value: GroupEventType.JOIN_REQUEST,
 						description: 'Khi có người yêu cầu vào nhóm',
 					},
 					{
-						name: 'Thêm Admin',
-						value: GroupEventTypeMap.ADD_ADMIN,
+						name: 'Thêm Admin / Phó Nhóm',
+						value: GroupEventType.ADD_ADMIN,
 						description: 'Khi có thành viên được thêm làm admin/phó nhóm',
 					},
 					{
-						name: 'Xóa Admin',
-						value: GroupEventTypeMap.REMOVE_ADMIN,
+						name: 'Xóa Admin / Phó Nhóm',
+						value: GroupEventType.REMOVE_ADMIN,
 						description: 'Khi admin/phó nhóm bị xóa quyền',
 					},
 					{
 						name: 'Chặn Thành Viên',
-						value: GroupEventTypeMap.BLOCK_MEMBER,
+						value: GroupEventType.BLOCK_MEMBER,
 						description: 'Khi thành viên bị chặn trong nhóm',
 					},
 					{
-						name: 'Xóa Thành Viên',
-						value: GroupEventTypeMap.REMOVE_MEMBER,
+						name: 'Xóa Thành Viên (Kick)',
+						value: GroupEventType.REMOVE_MEMBER,
 						description: 'Khi thành viên bị xóa khỏi nhóm (bị kick)',
 					},
 					{
-						name: 'Cập Nhật Nhóm',
-						value: GroupEventTypeMap.UPDATE,
+						name: 'Cập Nhật Nhóm (Tên/Avatar)',
+						value: GroupEventType.UPDATE,
 						description: 'Khi thông tin nhóm được cập nhật (tên, avatar)',
 					},
 					{
-						name: 'Tạo Link Mới',
-						value: GroupEventTypeMap.NEW_LINK,
+						name: 'Đổi Avatar Nhóm',
+						value: GroupEventType.UPDATE_AVATAR,
+						description: 'Khi avatar nhóm được thay đổi',
+					},
+					{
+						name: 'Tạo Link Mời Nhóm',
+						value: GroupEventType.NEW_LINK,
 						description: 'Khi link mời nhóm mới được tạo',
 					},
 					{
-						name: 'Cập Nhật Cài Đặt',
-						value: GroupEventTypeMap.UPDATE_SETTING,
+						name: 'Cập Nhật Cài Đặt Nhóm',
+						value: GroupEventType.UPDATE_SETTING,
 						description: 'Khi cài đặt nhóm thay đổi',
+					},
+					{
+						name: 'Pin Chủ Đề Mới',
+						value: GroupEventType.NEW_PIN_TOPIC,
+						description: 'Khi có chủ đề mới được ghim',
+					},
+					{
+						name: 'Cập Nhật Pin Chủ Đề',
+						value: GroupEventType.UPDATE_PIN_TOPIC,
+						description: 'Khi chủ đề ghim được cập nhật',
+					},
+					{
+						name: 'Sắp Xếp Lại Pin',
+						value: GroupEventType.REORDER_PIN_TOPIC,
+						description: 'Khi thứ tự ghim được sắp xếp lại',
+					},
+					{
+						name: 'Bỏ Ghim Chủ Đề',
+						value: GroupEventType.UNPIN_TOPIC,
+						description: 'Khi chủ đề bị bỏ ghim',
+					},
+					{
+						name: 'Xóa Chủ Đề',
+						value: GroupEventType.REMOVE_TOPIC,
+						description: 'Khi chủ đề bị xóa',
+					},
+					{
+						name: 'Cập Nhật Bảng Tin',
+						value: GroupEventType.UPDATE_BOARD,
+						description: 'Khi bảng tin nhóm được cập nhật',
+					},
+					{
+						name: 'Xóa Bảng Tin',
+						value: GroupEventType.REMOVE_BOARD,
+						description: 'Khi bảng tin nhóm bị xóa',
+					},
+					{
+						name: 'Cập Nhật Chủ Đề',
+						value: GroupEventType.UPDATE_TOPIC,
+						description: 'Khi chủ đề được cập nhật',
+					},
+					{
+						name: 'Chấp Nhận Nhắc Hẹn',
+						value: GroupEventType.ACCEPT_REMIND,
+						description: 'Khi nhắc hẹn được chấp nhận',
+					},
+					{
+						name: 'Từ Chối Nhắc Hẹn',
+						value: GroupEventType.REJECT_REMIND,
+						description: 'Khi nhắc hẹn bị từ chối',
+					},
+					{
+						name: 'Nhắc Hẹn Chủ Đề',
+						value: GroupEventType.REMIND_TOPIC,
+						description: 'Khi có nhắc hẹn cho chủ đề',
 					},
 				],
 				default: [],
@@ -154,12 +198,11 @@ export class ZaloGroupEventTrigger implements INodeType {
 					}
 
 					const webhookUrl = this.getNodeWebhookUrl('default') as string;
-					const nodeEventTypes = this.getNodeParameter('eventTypes', 0) as string[];
+					const nodeEventTypes = this.getNodeParameter('eventTypes', 0) as number[];
 
-					// Listen for group events (cmd=601 in zlapi websocket)
-					api.listener.on('event', async (event: any) => {
-						const eventType = event?.type as string;
-						const eventData = event?.data;
+					// Listen for group events via WebSocket (cmd=601 group control)
+					api.listener.on('group_event', async (event) => {
+						const eventType = event.type as GroupEventType;
 
 						// If eventTypes is empty array, forward all events
 						// Otherwise filter by selected types
@@ -172,7 +215,10 @@ export class ZaloGroupEventTrigger implements INodeType {
 								url: webhookUrl,
 								body: {
 									eventType,
-									eventData,
+									eventTypeName: GroupEventType[eventType],
+									eventData: event.data,
+									threadId: event.threadId,
+									isSelf: event.isSelf,
 									timestamp: Date.now(),
 								},
 								headers: {
@@ -218,7 +264,10 @@ export class ZaloGroupEventTrigger implements INodeType {
 			workflowData: [
 				this.helpers.returnJsonArray({
 					eventType: body?.eventType,
+					eventTypeName: body?.eventTypeName,
 					eventData: body?.eventData,
+					threadId: body?.threadId,
+					isSelf: body?.isSelf,
 					timestamp: body?.timestamp,
 				}),
 			],
