@@ -15,7 +15,7 @@ export class ZaloUser implements INodeType {
 		displayName: 'Zalo CN User ',
 		name: 'zaloUser',
 		icon: 'file:../shared/zalo.svg',
-		group: ['Zalo'],
+		group: ['organization'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
 		description: 'Quản lý người dùng Zalo',

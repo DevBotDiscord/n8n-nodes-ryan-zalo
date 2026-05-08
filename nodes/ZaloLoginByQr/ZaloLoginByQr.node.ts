@@ -13,7 +13,7 @@ export class ZaloLoginByQr implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Zalo CN Login Via QR Code',
 		name: 'zaloLoginByQr',
-		group: ['Zalo'],
+		group: ['organization'],
 		version: 1,
 		description: 'Đăng nhập Zalo bằng QR code và lưu thông tin vào Credential',
 		defaults: {

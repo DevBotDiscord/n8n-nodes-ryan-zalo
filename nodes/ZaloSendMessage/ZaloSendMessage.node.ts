@@ -15,7 +15,7 @@ export class ZaloSendMessage implements INodeType {
 		displayName: 'Zalo CN Send Message',
 		name: 'zaloSendMessage',
 		icon: 'file:../shared/zalo.svg',
-		group: ['Zalo'],
+		group: ['organization'],
 		version: 4,
 		description: 'Gửi tin nhắn qua API Zalo sử dụng kết nối đăng nhập bằng cookie',
 		defaults: {

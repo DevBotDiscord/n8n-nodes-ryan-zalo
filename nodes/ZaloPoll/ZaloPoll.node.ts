@@ -16,7 +16,7 @@ export class ZaloPoll implements INodeType {
             displayName: 'Zalo CN Poll',
             name: 'zaloPoll',
             icon: 'file:../shared/zalo.svg',
-            group: ['Zalo'],
+            group: ['organization'],
             version: 1,
             subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
             description: 'Quản bình chọn Zalo',
