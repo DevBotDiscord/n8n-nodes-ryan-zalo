@@ -12,39 +12,26 @@ let api: API | undefined;
 
 export class ZaloUser implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'Zalo CN User ',
+		displayName: 'Zalo CN User',
 		name: 'zaloUser',
 		icon: 'file:../shared/zalo.svg',
 		group: ['organization'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
 		description: 'Quản lý người dùng Zalo',
-		defaults: {
-			name: 'Zalo CN User',
-		},
+		defaults: { name: 'Zalo CN User' },
 		// @ts-ignore
 		inputs: ['main'],
 		// @ts-ignore
 		outputs: ['main'],
-		credentials: [
-			{
-				name: 'zaloApi',
-				required: true,
-				displayName: 'Zalo Credential to connect with',
-			},
-		],
+		credentials: [{ name: 'zaloApi', required: true, displayName: 'Zalo Credential to connect with' }],
 		properties: [
 			{
 				displayName: 'Resource',
 				name: 'resource',
 				type: 'options',
 				noDataExpression: true,
-				options: [
-					{
-						name: 'Zalo User',
-						value: 'zaloUser',
-					},
-				],
+				options: [{ name: 'Zalo User', value: 'zaloUser' }],
 				default: 'zaloUser',
 			},
 			...zaloUserOperations,
@@ -78,213 +65,135 @@ export class ZaloUser implements INodeType {
 		for (let i = 0; i < items.length; i++) {
 			try {
 				if (resource === 'zaloUser') {
-					// Chấp nhận lời mời kết bạn
-					if (operation === 'acceptFriendRequest') {
-						const userId = this.getNodeParameter('userId', i) as string;
+					let response: any;
+					let output: INodeExecutionData;
 
-						const response = await api.acceptFriendRequest(userId);
-
-						returnData.push({
-							json: {
-                                status: "Thành công",
-                                response: response,
-                            },
-							pairedItem: {
-								item: i,
-							},
-						});
-					}
-
-					// Gửi lời mời kết bạn
-					else if (operation === 'sendFriendRequest') {
-						const userId = this.getNodeParameter('userId', i) as string;
-						const message = this.getNodeParameter('message', i) as string;
-
-						const response = await api.sendFriendRequest(message, userId);
-
-						returnData.push({
-							json: {
-                                status: "Thành công",
-                                response: response,
-                            },
-							pairedItem: {
-								item: i,
-							},
-						});
-					}
-
-					// Chặn người dùng
-					else if (operation === 'blockUser') {
-						const userId = this.getNodeParameter('userId', i) as string;
-
-						const response = await api.blockUser(userId);
-
-						returnData.push({
-							json: {
-                                status: "Thành công",
-                                response: response,
-                            },
-							pairedItem: {
-								item: i,
-							},
-						});
-					}
-
-					// Bỏ chặn người dùng
-					else if (operation === 'unblockUser') {
-						const userId = this.getNodeParameter('userId', i) as string;
-
-						const response = await api.unblockUser(userId);
-
-						returnData.push({
-							json: {
-                                status: "Thành công",
-                                response: response,
-                            },
-							pairedItem: {
-								item: i,
-							},
-						});
-					}
-
-					// // Đổi ảnh đại diện
-					// else if (operation === 'changeAccountAvatar') {
-					// 	const userId = this.getNodeParameter('userId', i) as string;
-					// 	const filePath = this.getNodeParameter('filePath', i) as string;
-
-					// 	const response = await api.changeAccountAvatar(userId, filePath);
-
-					// 	returnData.push({
-					// 		json: {
-                    //             status: "Thành công",
-                    //             response: response,
-                    //         },
-					// 		pairedItem: {
-					// 			item: i,
-					// 		},
-					// 	});
-					// }
-
-					// Thay đổi cài đặt tài khoản
-					else if (operation === 'changeAccountSetting') {
-					const name = this.getNodeParameter('name', i) as string;
-					const dob = this.getNodeParameter('dob', i) as any;
-					const gender = this.getNodeParameter('gender', i) as number;
-
-					const response = await api.updateProfile({ name, dob, gender });						returnData.push({
-							json: {
-                                status: "Thành công",
-                                response: response,
-                            },
-							pairedItem: {
-								item: i,
-							},
-						});
-					}
-
-					// Lấy thông tin người dùng
-					else if (operation === 'getUserInfo') {
-						const userId = this.getNodeParameter('userId', i) as string;
-
-						const response = await api.getUserInfo(userId);
-
-						returnData.push({
-							json: response,
-							pairedItem: {
-								item: i,
-							},
-						});
-					}
-
-					// Lấy danh sách bạn bè
-					else if (operation === 'getAllFriends') {
-						const limit = this.getNodeParameter('limit', i) as number;
-
-						const response = await api.getAllFriends();
-						const friends = response.slice(0, limit) || [];
-
-						returnData.push({
-							json: {
-                                friends: friends,
-                            },
-							pairedItem: {
-								item: i,
-							},
-						});
-					}
-
-					// Tìm kiếm người dùng
-					else if (operation === 'findUser') {
-						const phoneNumber = this.getNodeParameter('phoneNumber', i) as string;
-
-						const response = await api.findUser(phoneNumber);
-
-						returnData.push({
-							json: response,
-							pairedItem: {
-								item: i,
-							},
-						});
-					}
-
-					// Đổi tên gợi nhớ
-					else if (operation === 'changeAliasName') {
-						const userId = this.getNodeParameter('userId', i) as string;
-						const aliasName = this.getNodeParameter('aliasName', i) as string;
-
-						const response = await api.changeFriendAlias(aliasName, userId);
-
-						returnData.push({
-							json: {
-								status: "Thành công",
-								response: response,
-							},
-							pairedItem: {
-								item: i,
-							},
-						});
-					}
-
-					//Undo message
-					else if (operation === 'undoMessage') {
-						const threadId = this.getNodeParameter('threadId', i) as string;
-						const type = this.getNodeParameter('threadType', i) as ThreadType;
-						const msgId = this.getNodeParameter('msgId', i) as string;
-						const cliMsgId = this.getNodeParameter('cliMsgId', i) as string;
-
-						const UndoOptions = {
-							msgId: msgId,
-							cliMsgId: cliMsgId
+					switch (operation) {
+						case 'acceptFriendRequest': {
+							const userId = this.getNodeParameter('userId', i) as string;
+							response = await api.acceptFriendRequest(userId);
+							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
+							break;
 						}
-
-						const response = await api.undo(UndoOptions, threadId, type);
-
-						returnData.push({
-							json: {
-								status: "Thành công",
-								response: response,
-							},
-							pairedItem: {
-								item: i,
-							},
-						});
+						case 'sendFriendRequest': {
+							const userId = this.getNodeParameter('userId', i) as string;
+							const message = this.getNodeParameter('message', i) as string;
+							response = await api.sendFriendRequest(message, userId);
+							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
+							break;
+						}
+						case 'blockUser': {
+							const userId = this.getNodeParameter('userId', i) as string;
+							response = await api.blockUser(userId);
+							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
+							break;
+						}
+						case 'unblockUser': {
+							const userId = this.getNodeParameter('userId', i) as string;
+							response = await api.unblockUser(userId);
+							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
+							break;
+						}
+						case 'changeAccountSetting': {
+							const name = this.getNodeParameter('name', i) as string;
+							const dob = this.getNodeParameter('dob', i) as string;
+							const gender = this.getNodeParameter('gender', i) as number;
+							const language = this.getNodeParameter('language', i, '') as string;
+							const payload: any = { name, dob, gender };
+							if (language) payload.language = language;
+							response = await api.updateProfile(payload);
+							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
+							break;
+						}
+						case 'getUserInfo': {
+							const userId = this.getNodeParameter('userId', i) as string;
+							response = await api.getUserInfo(userId);
+							output = { json: response, pairedItem: { item: i } };
+							break;
+						}
+						case 'getAllFriends': {
+							const limit = this.getNodeParameter('limit', i) as number;
+							response = await api.getAllFriends();
+							const friends = response.slice(0, limit) || [];
+							output = { json: { friends }, pairedItem: { item: i } };
+							break;
+						}
+						case 'findUser': {
+							const phoneNumber = this.getNodeParameter('phoneNumber', i) as string;
+							response = await api.findUser(phoneNumber);
+							output = { json: response, pairedItem: { item: i } };
+							break;
+						}
+						case 'changeAliasName': {
+							const userId = this.getNodeParameter('userId', i) as string;
+							const aliasName = this.getNodeParameter('aliasName', i) as string;
+							response = await api.changeFriendAlias(aliasName, userId);
+							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
+							break;
+						}
+						case 'undoMessage': {
+							const threadId = this.getNodeParameter('threadId', i) as string;
+							const type = this.getNodeParameter('threadType', i) as ThreadType;
+							const msgId = this.getNodeParameter('msgId', i) as string;
+							const cliMsgId = this.getNodeParameter('cliMsgId', i) as string;
+							response = await api.undo({ msgId, cliMsgId }, threadId, type);
+							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
+							break;
+						}
+						case 'changeAccountAvatar': {
+							const avatarUrl = this.getNodeParameter('avatarUrl', i) as string;
+							response = await api.changeAccountAvatar(avatarUrl);
+							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
+							break;
+						}
+						case 'removeFriend': {
+							const userId = this.getNodeParameter('userId', i) as string;
+							response = await api.removeFriend(userId);
+							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
+							break;
+						}
+						case 'undoFriendRequest': {
+							const userId = this.getNodeParameter('userId', i) as string;
+							response = await api.undoFriendRequest(userId);
+							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
+							break;
+						}
+						case 'getAliasList': {
+							const limit = this.getNodeParameter('limit', i, 50) as number;
+							response = await api.getAliasList(limit);
+							output = { json: response, pairedItem: { item: i } };
+							break;
+						}
+						case 'removeFriendAlias': {
+							const userId = this.getNodeParameter('userId', i) as string;
+							response = await api.removeFriendAlias(userId);
+							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
+							break;
+						}
+						case 'getReceivedFriendRequests': {
+							response = await api.getReceivedFriendRequests();
+							output = { json: response, pairedItem: { item: i } };
+							break;
+						}
+						case 'getSentFriendRequest': {
+							response = await api.getSentFriendRequest();
+							output = { json: response, pairedItem: { item: i } };
+							break;
+						}
+						default:
+							throw new NodeOperationError(this.getNode(), `Unknown operation: ${operation}`);
 					}
+					returnData.push(output);
 				}
 			} catch (error) {
 				if (this.continueOnFail()) {
 					returnData.push({
-						json: {
-							error: error.message,
-						},
-						pairedItem: {
-							item: i,
-						},
+						json: { error: error.message },
+						pairedItem: { item: i },
 					});
 					continue;
 				}
-				throw new NodeOperationError(this.getNode(), error, {
-					itemIndex: i,
-				});
+				throw new NodeOperationError(this.getNode(), error, { itemIndex: i });
 			}
 		}
 
