@@ -1,6 +1,6 @@
 {
 	"name": "n8n-nodes-ryan-zalo",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"description": "n8n-nodes-ryan-zalo - n8n community nodes for Zalo automation. Send messages, manage groups/users, QR login, webhook triggers for messages/friends/group events, polls, tags. Uses zalo-api-final.",
 	"keywords": [
 		"n8n-community-node-package",
@@ -76,7 +76,8 @@
 			"dist/nodes/ZaloFriendTrigger/ZaloFriendTrigger.node.js",
 			"dist/nodes/ZaloPoll/ZaloPoll.node.js",
 			"dist/nodes/ZaloTag/ZaloTag.node.js",
-			"dist/nodes/ZaloGroupEventTrigger/ZaloGroupEventTrigger.node.js"
+			"dist/nodes/ZaloGroupEventTrigger/ZaloGroupEventTrigger.node.js",
+			"dist/nodes/ZaloUnifiedTrigger/ZaloUnifiedTrigger.node.js"
 		]
 	},
 	"devDependencies": {
