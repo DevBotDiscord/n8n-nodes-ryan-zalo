@@ -16,8 +16,8 @@ export class ZaloSendMessage implements INodeType {
 		name: 'zaloSendMessage',
 		icon: 'file:../shared/zalo.svg',
 		group: ['organization'],
-		version: 5,
-		description: 'Gửi tin nhắn, sticker, video, voice, card, link, bank card, forward qua Zalo',
+		version: 6,
+		description: 'Gửi tin nhắn, ảnh/file (URL hoặc binary), sticker, video, voice, card, link, bank card, forward qua Zalo',
 		defaults: { name: 'Zalo CN Send' },
 		// @ts-ignore
 		inputs: ['main'],
@@ -31,6 +31,7 @@ export class ZaloSendMessage implements INodeType {
 				type: 'options',
 				options: [
 					{ name: 'Text Message', value: 'text' },
+					{ name: 'Image / File', value: 'image' },
 					{ name: 'Sticker', value: 'sticker' },
 					{ name: 'Video', value: 'video' },
 					{ name: 'Voice', value: 'voice' },
@@ -60,6 +61,62 @@ export class ZaloSendMessage implements INodeType {
 				],
 				default: 0,
 				description: 'Loại thread (user hoặc group)',
+			},
+			// ---- Image / File Fields ----
+			{
+				displayName: 'Input Method',
+				name: 'imageInputMethod',
+				type: 'options',
+				options: [
+					{ name: 'URL', value: 'url', description: 'Gửi ảnh/file từ URL công khai' },
+					{ name: 'Binary Data', value: 'binary', description: 'Gửi ảnh/file từ binary data (từ node Read Binary Files, HTTP Request...) (tối đa 1 file/lần)' },
+				],
+				default: 'url',
+				displayOptions: { show: { msgType: ['image'] } },
+				description: 'Nguồn ảnh/file',
+			},
+			{
+				displayName: 'Image / File URL',
+				name: 'imageUrl',
+				type: 'string',
+				default: '',
+				required: true,
+				displayOptions: { show: { msgType: ['image'], imageInputMethod: ['url'] } },
+				description: 'URL công khai của ảnh hoặc file (png, jpg, pdf, zip...)',
+				placeholder: 'https://example.com/image.jpg',
+			},
+			{
+				displayName: 'Input Binary Field',
+				name: 'binaryPropertyName',
+				type: 'string',
+				default: 'data',
+				required: true,
+				displayOptions: { show: { msgType: ['image'], imageInputMethod: ['binary'] } },
+				description: 'Tên của input binary field chứa file (từ node trước đó như Read Binary Files)',
+			},
+			{
+				displayName: 'File Name',
+				name: 'fileName',
+				type: 'string',
+				default: '',
+				displayOptions: { show: { msgType: ['image'], imageInputMethod: ['binary'] } },
+				description: 'Tên file (để trống sẽ dùng tên từ binary data). VD: image.jpg',
+			},
+			{
+				displayName: 'Caption',
+				name: 'imageCaption',
+				type: 'string',
+				default: '',
+				displayOptions: { show: { msgType: ['image'] } },
+				description: 'Caption (chú thích) kèm theo ảnh/file',
+			},
+			{
+				displayName: 'TTL (ms)',
+				name: 'imageTtl',
+				type: 'number',
+				default: 0,
+				displayOptions: { show: { msgType: ['image'] } },
+				description: 'Thời gian sống (milliseconds), 0 = vĩnh viễn',
 			},
 			// ---- Text Message Fields ----
 			{
@@ -369,6 +426,46 @@ export class ZaloSendMessage implements INodeType {
 				let attachmentsList: string[] = [];
 
 				switch (msgType) {
+					case 'image': {
+						const imageInputMethod = this.getNodeParameter('imageInputMethod', i) as string;
+						const caption = this.getNodeParameter('imageCaption', i, '') as string;
+
+						if (imageInputMethod === 'url') {
+							const imageUrl = this.getNodeParameter('imageUrl', i) as string;
+							const filePath = await saveFile(imageUrl);
+							if (!filePath) {
+								throw new NodeOperationError(this.getNode(), `Failed to download file from ${imageUrl}`);
+							}
+							attachmentsList.push(filePath);
+							// sendMessage with file path attachment (zalo-api-final handles upload)
+							const messageContent: any = { msg: caption, attachments: [filePath] };
+							response = await api!.sendMessage(messageContent, threadId, type);
+						} else {
+							const binaryPropertyName = this.getNodeParameter('binaryPropertyName', i) as string;
+							const customFileName = this.getNodeParameter('fileName', i, '') as string;
+							const binaryData = await this.helpers.getBinaryDataBuffer(i, binaryPropertyName);
+							if (!binaryData) {
+								throw new NodeOperationError(this.getNode(), `No binary data found at "${binaryPropertyName}"`);
+							}
+							const fileName = customFileName || items[i].binary?.[binaryPropertyName]?.fileName || 'file.bin';
+							const fileSize = binaryData.length;
+							// Upload via uploadAttachment (like Python _uploadImage)
+							const uploadResult = await api!.uploadAttachment(
+								{
+									data: Buffer.from(binaryData),
+									filename: fileName as `${string}.${string}`,
+									metadata: { totalSize: fileSize },
+								} as any,
+								threadId,
+								type,
+							);
+							const uploaded = (uploadResult as any)?.[0];
+							this.logger.info(`File uploaded via binary: ${JSON.stringify({ fileName, fileSize, uploaded })}`);
+							const messageContent: any = { msg: caption, attachments: uploaded?.normalUrl ? [uploaded.normalUrl] : [] };
+							response = await api!.sendMessage(messageContent, threadId, type);
+						}
+						break;
+					}
 					case 'text': {
 						const message = this.getNodeParameter('message', i) as string;
 						const urgency = this.getNodeParameter('urgency', i, 0) as number;
@@ -394,7 +491,6 @@ export class ZaloSendMessage implements INodeType {
 								}
 							}
 						}
-						// Send typing event
 						try {
 							await api!.sendTypingEvent(threadId, type);
 						} catch (e) { this.logger.warn('Cannot send typing event'); }
@@ -471,7 +567,6 @@ export class ZaloSendMessage implements INodeType {
 					}
 				}
 
-				// Cleanup temp files
 				for (const file of attachmentsList) {
 					removeFile(file);
 				}
