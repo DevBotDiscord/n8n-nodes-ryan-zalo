@@ -117,14 +117,31 @@ export class ZaloGroup implements INodeType {
 						case 'getGroupMembers': {
 							const groupId = this.getNodeParameter('groupId', i) as string;
 							const limit = this.getNodeParameter('limit', i) as number;
-							response = await api.getGroupInfo(groupId);
-							const groupInfo = (response as any).gridInfoMap?.[groupId];
-							const members = groupInfo?.memberIds?.slice(0, limit) || [];
+
+							// Step 1: get group basic info for memVerList
+							const info = await api.getGroupInfo(groupId);
+							const groupInfo = (info as any).gridInfoMap?.[groupId];
+							const memVerList: string[] = groupInfo?.memVerList || [];
+
+							// Step 2: fetch full member profiles via getGroupMembersInfo
+							let members: any[] = [];
+							if (memVerList.length > 0) {
+								const memberInfo = await api.getGroupMembersInfo(memVerList);
+								const profiles = (memberInfo as any)?.profiles || {};
+								members = Object.values(profiles).slice(0, limit);
+							}
+
 							const admins = groupInfo?.adminIds || [];
-							const currentMems = groupInfo?.currentMems || [];
-							const updateMems = groupInfo?.updateMems || [];
 							const totalMember = groupInfo?.totalMember || 0;
-							output = { json: { members, admins, currentMems, updateMems, totalMember } as IDataObject, pairedItem: { item: i } };
+							output = {
+								json: {
+									members,
+									memberCount: members.length,
+									admins,
+									totalMember,
+								} as IDataObject,
+								pairedItem: { item: i },
+							};
 							break;
 						}
 						case 'getAllGroups': {
