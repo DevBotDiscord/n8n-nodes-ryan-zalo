@@ -16,7 +16,7 @@ export class ZaloSendMessage implements INodeType {
 		name: 'zaloSendMessage',
 		icon: 'file:../shared/zalo.svg',
 		group: ['organization'],
-		version: 6,
+		version: 4,
 		description: 'Gửi tin nhắn, ảnh/file (URL hoặc binary), sticker, video, voice, card, link, bank card, forward qua Zalo',
 		defaults: { name: 'Zalo CN Send' },
 		// @ts-ignore
