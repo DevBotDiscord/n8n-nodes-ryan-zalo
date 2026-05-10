@@ -422,6 +422,7 @@ export class ZaloSendMessage implements INodeType {
 				const type = typeNumber === 0 ? ThreadType.User : ThreadType.Group;
 				const msgType = this.getNodeParameter('msgType', i) as string;
 
+				const cliMsgId = Date.now();
 				let response: any;
 				let attachmentsList: string[] = [];
 
@@ -572,7 +573,7 @@ export class ZaloSendMessage implements INodeType {
 				}
 
 				returnData.push({
-					json: { success: true, response, threadId, threadType: type, msgType },
+					json: { success: true, cliMsgId, response, threadId, threadType: type, msgType },
 				});
 			} catch (error) {
 				this.logger.error('Error sending Zalo message:', error);
