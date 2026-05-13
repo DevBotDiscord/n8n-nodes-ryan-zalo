@@ -1,6 +1,6 @@
 {
 	"name": "n8n-nodes-ryan-zalo",
-	"version": "1.0.7",
+	"version": "1.0.8",
 	"description": "n8n-nodes-ryan-zalo - n8n community nodes for Zalo automation. Send messages, manage groups/users, QR login, webhook triggers for messages/friends/group events, polls, tags. Uses zalo-api-final.",
 	"keywords": [
 		"n8n-community-node-package",
