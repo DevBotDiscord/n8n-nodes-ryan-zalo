@@ -69,6 +69,15 @@ export class ZaloGroup implements INodeType {
 					let response: any;
 					let output: INodeExecutionData;
 
+					const toErrorMessage = (err: unknown): string => {
+						if (err instanceof Error && err.message) return err.message;
+						try {
+							return JSON.stringify(err);
+						} catch {
+							return String(err);
+						}
+					};
+
 					const normalizeGroupId = (raw: unknown): string => {
 						const groupId = String(raw ?? '').trim();
 						if (!groupId) {
@@ -77,12 +86,30 @@ export class ZaloGroup implements INodeType {
 						return groupId;
 					};
 
+					const normalizeLink = (raw: unknown): string => {
+						const link = String(raw ?? '').trim();
+						if (!link) {
+							throw new NodeOperationError(this.getNode(), 'Group link is empty', { itemIndex: i });
+						}
+						return link;
+					};
+
 					const safeGetGroupInfo = async (groupId: string) => {
 						try {
 							return await api!.getGroupInfo(groupId);
-						} catch (_e) {
-							// Fallback: some runtime contexts behave better with array input
-							return await api!.getGroupInfo([groupId] as any);
+						} catch (e1) {
+							const firstError = toErrorMessage(e1);
+							try {
+								// Fallback: some runtime contexts behave better with array input
+								return await api!.getGroupInfo([groupId] as any);
+							} catch (e2) {
+								const secondError = toErrorMessage(e2);
+								throw new NodeOperationError(
+									this.getNode(),
+									`getGroupInfo failed for groupId=${groupId}. primary=${firstError}; fallback=${secondError}`,
+									{ itemIndex: i },
+								);
+							}
 						}
 					};
 
@@ -90,9 +117,23 @@ export class ZaloGroup implements INodeType {
 						try {
 							return await api!.getGroupLinkDetail(groupId);
 						} catch (e) {
-							// Verify group visibility / membership before throwing
-							await safeGetGroupInfo(groupId);
-							throw e;
+							const linkError = toErrorMessage(e);
+							try {
+								// Verify group visibility / membership before throwing clearer error
+								await safeGetGroupInfo(groupId);
+								throw new NodeOperationError(
+									this.getNode(),
+									`getGroupLinkDetail failed for groupId=${groupId}. Group exists but link detail endpoint failed. detail=${linkError}`,
+									{ itemIndex: i },
+								);
+							} catch (infoError) {
+								const infoDetail = toErrorMessage(infoError);
+								throw new NodeOperationError(
+									this.getNode(),
+									`getGroupLinkDetail failed for groupId=${groupId}. Also cannot verify group via getGroupInfo. linkError=${linkError}; groupInfoError=${infoDetail}`,
+									{ itemIndex: i },
+								);
+							}
 						}
 					};
 
@@ -231,7 +272,7 @@ export class ZaloGroup implements INodeType {
 							break;
 						}
 						case 'joinGroupLink': {
-							const link = this.getNodeParameter('link', i) as string;
+							const link = normalizeLink(this.getNodeParameter('link', i));
 							response = await api.joinGroupLink(link);
 							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
 							break;
@@ -306,11 +347,12 @@ export class ZaloGroup implements INodeType {
 					returnData.push(output);
 				}
 			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error);
 				if (this.continueOnFail()) {
-					returnData.push({ json: { error: error.message }, pairedItem: { item: i } });
+					returnData.push({ json: { error: errorMessage }, pairedItem: { item: i } });
 					continue;
 				}
-				throw new NodeOperationError(this.getNode(), error, { itemIndex: i });
+				throw new NodeOperationError(this.getNode(), errorMessage, { itemIndex: i });
 			}
 		}
 
