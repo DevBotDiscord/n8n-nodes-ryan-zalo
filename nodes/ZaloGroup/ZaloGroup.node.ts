@@ -69,6 +69,33 @@ export class ZaloGroup implements INodeType {
 					let response: any;
 					let output: INodeExecutionData;
 
+					const normalizeGroupId = (raw: unknown): string => {
+						const groupId = String(raw ?? '').trim();
+						if (!groupId) {
+							throw new NodeOperationError(this.getNode(), 'Group ID is empty', { itemIndex: i });
+						}
+						return groupId;
+					};
+
+					const safeGetGroupInfo = async (groupId: string) => {
+						try {
+							return await api!.getGroupInfo(groupId);
+						} catch (_e) {
+							// Fallback: some runtime contexts behave better with array input
+							return await api!.getGroupInfo([groupId] as any);
+						}
+					};
+
+					const safeGetGroupLinkDetail = async (groupId: string) => {
+						try {
+							return await api!.getGroupLinkDetail(groupId);
+						} catch (e) {
+							// Verify group visibility / membership before throwing
+							await safeGetGroupInfo(groupId);
+							throw e;
+						}
+					};
+
 					switch (operation) {
 						case 'createGroup': {
 							const groupName = this.getNodeParameter('groupName', i) as string;
@@ -79,21 +106,21 @@ export class ZaloGroup implements INodeType {
 							break;
 						}
 						case 'getGroupInfo': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
-							response = await api.getGroupInfo(groupId);
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
+							response = await safeGetGroupInfo(groupId);
 							const groupInfo = (response as any).gridInfoMap?.[groupId];
 							output = { json: { response, groupInfo }, pairedItem: { item: i } };
 							break;
 						}
 						case 'addGroupDeputy': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							const userId = this.getNodeParameter('userId', i) as string;
 							response = await api.addGroupDeputy(groupId, userId);
 							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
 							break;
 						}
 						case 'addUserToGroup': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							const userIds = this.getNodeParameter('userIds', i) as string;
 							const userList = userIds.split(',').map(s => s.trim()).filter(s => s);
 							response = await api.addUserToGroup(userList, groupId);
@@ -101,25 +128,25 @@ export class ZaloGroup implements INodeType {
 							break;
 						}
 						case 'changeGroupAvatar': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							const imageUrl = this.getNodeParameter('imageUrl', i) as string;
 							response = await api.changeGroupAvatar(groupId, imageUrl);
 							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
 							break;
 						}
 						case 'changeGroupName': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							const newName = this.getNodeParameter('newName', i) as string;
 							response = await api.changeGroupName(groupId, newName);
 							output = { json: response, pairedItem: { item: i } };
 							break;
 						}
 						case 'getGroupMembers': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							const limit = this.getNodeParameter('limit', i) as number;
 
 							// Step 1: get group basic info for memVerList
-							const info = await api.getGroupInfo(groupId);
+							const info = await safeGetGroupInfo(groupId);
 							const groupInfo = (info as any).gridInfoMap?.[groupId];
 							const memVerList: string[] = groupInfo?.memVerList || [];
 
@@ -150,7 +177,7 @@ export class ZaloGroup implements INodeType {
 							break;
 						}
 						case 'removeUserFromGroup': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							const userIds = this.getNodeParameter('userIds', i) as string;
 							const userList = userIds.split(',').map(s => s.trim()).filter(s => s);
 							response = await api.removeUserFromGroup(userList, groupId);
@@ -158,7 +185,7 @@ export class ZaloGroup implements INodeType {
 							break;
 						}
 						case 'createNote': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							const content = this.getNodeParameter('content', i) as string;
 							const pinAct = this.getNodeParameter('pinAct', i) as boolean;
 							response = await api.createNoteGroup({ title: content, pinAct }, groupId);
@@ -166,21 +193,21 @@ export class ZaloGroup implements INodeType {
 							break;
 						}
 						case 'leaveGroup': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							const silent = this.getNodeParameter('silent', i, false) as boolean;
 							response = await api.leaveGroup(groupId, silent);
 							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
 							break;
 						}
 						case 'changeGroupOwner': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							const userId = this.getNodeParameter('userId', i) as string;
 							response = await api.changeGroupOwner(userId, groupId);
 							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
 							break;
 						}
 						case 'updateGroupSettings': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							const options: any = {};
 							const keys = ['blockName', 'signAdminMsg', 'setTopicOnly', 'enableMsgHistory', 'joinAppr', 'lockCreatePost', 'lockCreatePoll', 'lockSendMsg', 'lockViewMember'];
 							for (const key of keys) {
@@ -192,13 +219,13 @@ export class ZaloGroup implements INodeType {
 							break;
 						}
 						case 'enableGroupLink': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							response = await api.enableGroupLink(groupId);
 							output = { json: response, pairedItem: { item: i } };
 							break;
 						}
 						case 'disableGroupLink': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							response = await api.disableGroupLink(groupId);
 							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
 							break;
@@ -210,14 +237,14 @@ export class ZaloGroup implements INodeType {
 							break;
 						}
 						case 'disperseGroup': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							response = await api.disperseGroup(groupId);
 							output = { json: { status: 'Thành công', response }, pairedItem: { item: i } };
 							break;
 						}
 						case 'getGroupLinkDetail': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
-							response = await api.getGroupLinkDetail(groupId);
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
+							response = await safeGetGroupLinkDetail(groupId);
 							output = { json: response, pairedItem: { item: i } };
 							break;
 						}
@@ -229,20 +256,20 @@ export class ZaloGroup implements INodeType {
 							break;
 						}
 						case 'inviteUserToGroups': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							const memberIds = this.getNodeParameter('memberIds', i) as string;
 							response = await api.inviteUserToGroups(memberIds.split(',')[0].trim(), groupId);
 							output = { json: response, pairedItem: { item: i } };
 							break;
 						}
 						case 'getPendingGroupMembers': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							response = await api.getPendingGroupMembers(groupId);
 							output = { json: response, pairedItem: { item: i } };
 							break;
 						}
 						case 'reviewPendingMemberRequest': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							const memberIds = this.getNodeParameter('memberIds', i) as string;
 							const isApprove = this.getNodeParameter('isApprove', i) as boolean;
 							response = await api.reviewPendingMemberRequest({ members: memberIds.split(',').map(s => s.trim()).filter(s => s), isApprove }, groupId);
@@ -250,7 +277,7 @@ export class ZaloGroup implements INodeType {
 							break;
 						}
 						case 'getGroupBlockedMember': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							const page = this.getNodeParameter('page', i, 1) as number;
 							const count = this.getNodeParameter('count', i, 30) as number;
 							response = await api.getGroupBlockedMember({ page, count }, groupId);
@@ -258,7 +285,7 @@ export class ZaloGroup implements INodeType {
 							break;
 						}
 						case 'addGroupBlockedMember': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							const userIds = this.getNodeParameter('userIds', i) as string;
 							const userList = userIds.split(',').map(s => s.trim()).filter(s => s);
 							response = await api.addGroupBlockedMember(userList, groupId);
@@ -266,7 +293,7 @@ export class ZaloGroup implements INodeType {
 							break;
 						}
 						case 'removeGroupBlockedMember': {
-							const groupId = this.getNodeParameter('groupId', i) as string;
+							const groupId = normalizeGroupId(this.getNodeParameter('groupId', i));
 							const userIds = this.getNodeParameter('userIds', i) as string;
 							const userList = userIds.split(',').map(s => s.trim()).filter(s => s);
 							response = await api.removeGroupBlockedMember(userList, groupId);
